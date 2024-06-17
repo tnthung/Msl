@@ -1,6 +1,6 @@
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Spacing {
   /// `+` in the middle of `_+_`
   Both,
