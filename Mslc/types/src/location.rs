@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 
+pub type Range = std::ops::Range<Location>;
+
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Location {
   file  : Arc<String>,
