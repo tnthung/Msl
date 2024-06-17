@@ -1,2 +1,2 @@
-mod location;
-mod token;
+pub mod location;
+pub mod token;

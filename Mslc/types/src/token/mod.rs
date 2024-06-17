@@ -2,5 +2,5 @@ mod delimiter;
 mod spacing;
 
 
-use delimiter::*;
-use spacing::*;
+pub use delimiter::*;
+pub use spacing::*;
