@@ -350,6 +350,7 @@ impl From<Group> for Vec<Token> {
   }
 }
 
+
 impl From<LitBool> for bool {
   fn from(lit_bool: LitBool) -> Self {
     lit_bool.value
