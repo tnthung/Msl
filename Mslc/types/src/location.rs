@@ -6,7 +6,7 @@ pub type Range = std::ops::Range<Location>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Location {
-  file  : Arc<String>,
+  file  : Arc<str>,
   line  : usize,
   column: usize,
   offset: usize,
@@ -15,12 +15,11 @@ pub struct Location {
 
 impl Location {
   pub fn new(
-    file  : impl Into<String>,
+    file  : Arc<str>,
     line  : usize,
     column: usize,
     offset: usize
   ) -> Self {
-    let file = Arc::new(file.into());
     Self { file, line, column, offset }
   }
 
