@@ -6,4 +6,5 @@ members  = [
 
 
 [workspace.dependencies]
+num   = "0.4.3"
 types = { path = "types" }

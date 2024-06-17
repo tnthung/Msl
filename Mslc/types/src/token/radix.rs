@@ -1,3 +1,4 @@
+use num::bigint::ParseBigIntError;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,5 +29,17 @@ impl Radix {
 
   pub fn is_hexadecimal(&self) -> bool {
     matches!(self, Radix::Hexadecimal)
+  }
+
+  pub fn parse<T>(&self, s: &str) -> Result<T, ParseBigIntError>
+  where
+    T: std::str::FromStr + num::Num<FromStrRadixErr = ParseBigIntError>
+  {
+    match self {
+      Radix::Binary      => T::from_str_radix(&s[2..], 2 ),
+      Radix::Octal       => T::from_str_radix(&s[2..], 8 ),
+      Radix::Decimal     => T::from_str_radix(&s     , 10),
+      Radix::Hexadecimal => T::from_str_radix(&s[2..], 16),
+    }
   }
 }

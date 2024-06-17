@@ -7,3 +7,7 @@ edition = "2021"
 [lib]
 name = "types"
 path = "src/lib.rs"
+
+
+[dependencies]
+num = { workspace = true }
