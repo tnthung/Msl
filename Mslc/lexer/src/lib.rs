@@ -91,6 +91,7 @@ impl Lexer {
       self.skip_whitespace();
       if self.is_eof() { break; }
 
+      if let Some(t) = self.lex_lit_bool() { tokens.push(t); continue; }
 
       tokens.push(self.lex_punctuator());
     }
@@ -210,5 +211,34 @@ impl Lexer {
     let spacing = self.get_spacing(&range);
 
     Token::Punct(Punct { range, spacing, punctuator: ch })
+  }
+
+  fn lex_lit_bool(&mut self) -> Option<Token> {
+    let start = self.get_location();
+
+    let [a, b, c, d, e] = self.peek_next_n();
+
+    if a == Some('t')
+    && b == Some('r')
+    && c == Some('u')
+    && d == Some('e') {
+      let range = start..self.advance_n(4).unwrap();
+      let spacing = self.get_spacing(&range);
+
+      return Some(Token::LitBool(LitBool { range, spacing, value: true }));
+    }
+
+    if a == Some('f')
+    && b == Some('a')
+    && c == Some('l')
+    && d == Some('s')
+    && e == Some('e') {
+      let range = start..self.advance_n(5).unwrap();
+      let spacing = self.get_spacing(&range);
+
+      return Some(Token::LitBool(LitBool { range, spacing, value: false }));
+    }
+
+    None
   }
 }
