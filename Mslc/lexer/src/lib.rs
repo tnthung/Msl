@@ -91,8 +91,9 @@ impl Lexer {
       self.skip_whitespace();
       if self.is_eof() { break; }
 
-      if let Some(t) = self.lex_lit_bool  () { tokens.push(t); continue; }
-      if let Some(t) = self.lex_identifier() { tokens.push(t); continue; }
+      if let Some(t) = self.lex_lit_bool  ()  { tokens.push(t); continue; }
+      if let Some(t) = self.lex_lit_str   ()? { tokens.push(t); continue; }
+      if let Some(t) = self.lex_identifier()  { tokens.push(t); continue; }
 
       tokens.push(self.lex_punctuator());
     }
@@ -236,6 +237,125 @@ impl Lexer {
     let spacing = self.get_spacing(&range);
 
     Token::Punct(Punct { range, spacing, punctuator: ch })
+  }
+
+  fn lex_lit_str(&mut self) -> Result<Option<Token>> {
+    let before = self.get_location();
+    let prefix = self.lex_identifier();
+
+    let start = if let Some(ref p) = prefix {
+      p.range().start.clone()
+    } else {
+      self.get_location()
+    };
+
+    match self.peek() {
+      Some('"') => { self.advance(); }
+      _         => {
+        self.rollback(before);
+        return Ok(None);
+      },
+    }
+
+    let mut value  = String::new();
+    let mut escape = None;
+
+    loop {
+      match self.peek() {
+        None => {
+          let range = start..self.get_location();
+          return Err(UnterminatedStringLiteral(self.clone(), range));
+        }
+
+        Some('"') if escape.is_none() => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance().unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitStr(LitStr { range, spacing, value, prefix })))
+        }
+
+        Some('\\') if escape.is_none() => {
+          escape = self.advance();
+        }
+
+        Some('n' ) if escape.is_some() => { value.push('\n'); escape = None; self.advance(); }
+        Some('r' ) if escape.is_some() => { value.push('\r'); escape = None; self.advance(); }
+        Some('t' ) if escape.is_some() => { value.push('\t'); escape = None; self.advance(); }
+        Some('0' ) if escape.is_some() => { value.push('\0'); escape = None; self.advance(); }
+        Some('\"') if escape.is_some() => { value.push('\"'); escape = None; self.advance(); }
+        Some('\'') if escape.is_some() => { value.push('\''); escape = None; self.advance(); }
+        Some('\\') if escape.is_some() => { value.push('\\'); escape = None; self.advance(); }
+
+        Some('u') if escape.is_some() => {
+          let mut code_point = 0;
+          let mut count      = 0;
+          let mut closed     = false;
+
+          match self.next() {
+            Some(('{', _)) => {}
+
+            None => {
+              let range = start..self.get_location();
+              return Err(UnterminatedStringLiteral(self.clone(), range));
+            }
+
+            Some((_, loc)) => {
+              let range = start..loc;
+              return Err(InvalidEscapeSequence(self.clone(), range));
+            }
+          }
+
+          for _ in 0..7 {
+            match self.next() {
+              None => {
+                let range = start..self.get_location();
+                return Err(UnterminatedStringLiteral(self.clone(), range));
+              }
+
+              Some(('}', _)) => {
+                closed = true;
+                break;
+              }
+
+              Some((ch @ ('0'..='9' | 'A'..='F'), _)) => {
+                code_point = code_point<<4 | ch.to_digit(16).unwrap();
+                count += 1;
+              }
+
+              Some((_, loc)) => {
+                let range = start..loc;
+                return Err(InvalidEscapeSequence(self.clone(), range));
+              }
+            }
+          }
+
+          if !closed || count < 1 || count > 6 {
+            let range = start..self.get_location();
+            return Err(InvalidEscapeSequence(self.clone(), range));
+          }
+
+          if let Some(ch) = std::char::from_u32(code_point) {
+            value.push(ch);
+            escape = None;
+            continue;
+          }
+
+          let range = start..self.get_location();
+          return Err(InvalidEscapeSequence(self.clone(), range));
+        }
+
+        Some(_) if escape.is_some() => {
+          let range = start..escape.unwrap();
+          return Err(InvalidEscapeSequence(self.clone(), range));
+        }
+
+        Some(ch) => {
+          value.push(ch);
+          self.advance();
+        }
+      }
+    }
   }
 
   fn lex_lit_bool(&mut self) -> Option<Token> {
