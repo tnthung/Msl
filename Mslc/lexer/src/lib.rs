@@ -92,6 +92,7 @@ impl Lexer {
       if self.is_eof() { break; }
 
       if let Some(t) = self.lex_lit_bool  ()  { tokens.push(t); continue; }
+      if let Some(t) = self.lex_lit_char  ()? { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_str   ()? { tokens.push(t); continue; }
       if let Some(t) = self.lex_identifier()  { tokens.push(t); continue; }
 
@@ -356,6 +357,158 @@ impl Lexer {
         }
       }
     }
+  }
+
+  fn lex_lit_char(&mut self) -> Result<Option<Token>> {
+    let before = self.get_location();
+    let prefix = self.lex_identifier();
+
+    let start = if let Some(ref p) = prefix {
+      p.range().start.clone()
+    } else {
+      self.get_location()
+    };
+
+    let [l, a, r] = self.peek_next_n();
+
+    if l != Some('\'') {
+      self.rollback(before);
+      return Ok(None);
+    }
+
+    if a.is_none() {
+      let range = start..self.advance().unwrap();
+      return Err(UnterminatedCharLiteral(self.clone(), range));
+    }
+
+    if a == Some('\\') {
+      if r.is_none() {
+        let range = start..self.advance_n(2).unwrap();
+        return Err(UnterminatedCharLiteral(self.clone(), range));
+      }
+
+      self.advance_n(2);
+
+      match self.peek_next_n() {
+        [Some('n'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\n', prefix })));
+        }
+
+        [Some('r'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\r', prefix })));
+        }
+
+        [Some('t'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\t', prefix })));
+        }
+
+        [Some('0'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\0', prefix })));
+        }
+
+        [Some('\''), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\'', prefix })));
+        }
+
+        [Some('\"'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\"', prefix })));
+        }
+
+        [Some('\\'), Some('\'')] => {
+          let prefix  = prefix.map(|t| t.try_into().unwrap());
+          let range   = start..self.advance_n(2).unwrap();
+          let spacing = self.get_spacing(&range);
+
+          return Ok(Some(Token::LitChar(LitChar { range, spacing, value: '\\', prefix })));
+        }
+
+        [Some('u'), Some('{')] => {
+          self.advance_n(2);
+
+          let mut code_point = 0;
+
+          for i in 0..7 {
+            match self.next() {
+              Some(('}', _)) => {
+                if i == 0 {
+                  let range = start..self.get_location();
+                  return Err(InvalidEscapeSequence(self.clone(), range));
+                }
+
+                let prefix  = prefix.map(|t| t.try_into().unwrap());
+                let range   = start..self.advance().unwrap();
+                let spacing = self.get_spacing(&range);
+
+                if let Some(value) = std::char::from_u32(code_point) {
+                  return Ok(Some(Token::LitChar(LitChar { range, spacing, value, prefix })));
+                }
+
+                return Err(InvalidEscapeSequence(self.clone(), range));
+              }
+
+              Some((ch @ ('0'..='9' | 'A'..='F'), _)) => {
+                if i > 5 {
+                  let range = start..self.get_location();
+                  return Err(InvalidEscapeSequence(self.clone(), range));
+                }
+
+                code_point = code_point<<4 | ch.to_digit(16).unwrap();
+              }
+
+              Some((_, loc)) => {
+                let range = start..loc;
+                return Err(InvalidEscapeSequence(self.clone(), range));
+              }
+
+              None => {
+                let range = start..self.get_location();
+                return Err(UnterminatedCharLiteral(self.clone(), range));
+              }
+            }
+          }
+        }
+
+        _ => {
+          let range = start..self.get_location();
+          return Err(UnterminatedCharLiteral(self.clone(), range));
+        }
+      }
+    }
+
+    if r == Some('\'') {
+      let prefix  = prefix.map(|t| t.try_into().unwrap());
+      let range   = start..self.advance_n(3).unwrap();
+      let spacing = self.get_spacing(&range);
+
+      return Ok(Some(Token::LitChar(LitChar { range, spacing, value: a.unwrap(), prefix })));
+    }
+
+    let range = start..self.advance_n(3).unwrap();
+    Err(UnterminatedCharLiteral(self.clone(), range))
   }
 
   fn lex_lit_bool(&mut self) -> Option<Token> {
