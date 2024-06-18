@@ -91,7 +91,8 @@ impl Lexer {
       self.skip_whitespace();
       if self.is_eof() { break; }
 
-      if let Some(t) = self.lex_lit_bool() { tokens.push(t); continue; }
+      if let Some(t) = self.lex_lit_bool  () { tokens.push(t); continue; }
+      if let Some(t) = self.lex_identifier() { tokens.push(t); continue; }
 
       tokens.push(self.lex_punctuator());
     }
@@ -202,6 +203,30 @@ impl Lexer {
 
       self.advance();
     }
+  }
+
+  fn lex_identifier(&mut self) -> Option<Token> {
+    let start = self.get_location();
+    let mut end        = start.clone();
+    let mut identifier = String::new();
+
+    while let Some(ch) = self.peek() {
+      if !ch.is_ascii_alphanumeric() && ch != '_' {
+        break;
+      }
+
+      identifier.push(ch);
+      end = self.advance()?;
+    }
+
+    if identifier.is_empty() {
+      return None;
+    }
+
+    let range   = start..end;
+    let spacing = self.get_spacing(&range);
+
+    Some(Token::Ident(Ident { range, spacing, identifier }))
   }
 
   fn lex_punctuator(&mut self) -> Token {
