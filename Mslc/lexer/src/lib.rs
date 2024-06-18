@@ -18,6 +18,18 @@ pub struct Lexer {
 
 
 type PossibleChar = Option<(char, Location)>;
+type Result<T>    = std::result::Result<T, LexError>;
+
+
+#[derive(Debug, Clone)]
+pub enum LexError {
+  UnterminatedStringLiteral(Lexer, Range),
+  InvalidEscapeSequence    (Lexer, Range),
+  UnterminatedCharLiteral  (Lexer, Range),
+}
+
+
+use LexError::*;
 
 
 impl Lexer {
@@ -66,6 +78,25 @@ impl Lexer {
       was_space: false,
       tokens   : None,
     }
+  }
+
+  pub fn lex(&mut self) -> Result<Arc<[Token]>> {
+    if let Some(tokens) = &self.tokens {
+      return Ok(tokens.clone());
+    }
+
+    let mut tokens = Vec::new();
+
+    loop {
+      self.skip_whitespace();
+      if self.is_eof() { break; }
+
+
+      tokens.push(self.lex_punctuator());
+    }
+
+    self.tokens = Some(tokens.into());
+    Ok(self.tokens.as_ref().unwrap().clone())
   }
 
   fn is_eof(&self) -> bool {
@@ -170,5 +201,14 @@ impl Lexer {
 
       self.advance();
     }
+  }
+
+  fn lex_punctuator(&mut self) -> Token {
+    let (ch, start) = self.next().unwrap();
+
+    let range   = start.clone()..start;
+    let spacing = self.get_spacing(&range);
+
+    Token::Punct(Punct { range, spacing, punctuator: ch })
   }
 }
