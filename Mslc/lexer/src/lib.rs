@@ -92,6 +92,7 @@ impl Lexer {
       self.skip_whitespace();
       if self.is_eof() { break; }
 
+      if let Some(t) = self.lex_lit_float ()  { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_int   ()  { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_bool  ()  { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_char  ()? { tokens.push(t); continue; }
@@ -604,6 +605,35 @@ impl Lexer {
       sign,
       radix,
       exponent,
+      suffix,
+    }));
+  }
+
+  fn lex_lit_float(&mut self) -> Option<Token> {
+    let (mut range, m) = self.lex_by_regex(r"^[+-]?(?<num>[0-9](?:[0-9_]*[0-9])?)\.(?<den>[0-9](?:[0-9_]*[0-9])?)(?:[eE](?<exp>[+-]?[0-9]+))?", None)?;
+
+    let all = m.get("<0>")?;
+    let num = m.get("num")?;
+    let den = m.get("den")?;
+    let exp = m.get("exp").map(|e| e.parse().unwrap());
+
+    let suffix  = self.lex_identifier();
+
+    range.end = suffix.as_ref().map_or(
+      range.end, |t| t.range().end.clone());
+
+    let suffix  = suffix.map(|t| t.try_into().unwrap());
+    let sign    = if all.starts_with('-') { Sign::Negative } else { Sign::Positive };
+    let spacing = self.get_spacing(&range);
+
+    return Some(Token::LitFloat(LitFloat {
+      range,
+      spacing,
+      sign,
+      value      : all.clone(),
+      numerator  : num.clone(),
+      denominator: den.clone(),
+      exponent   : exp,
       suffix,
     }));
   }
