@@ -36,10 +36,10 @@ impl Radix {
     T: std::str::FromStr + num::Num<FromStrRadixErr = ParseBigIntError>
   {
     match self {
-      Radix::Binary      => T::from_str_radix(&s[2..], 2 ),
-      Radix::Octal       => T::from_str_radix(&s[2..], 8 ),
-      Radix::Decimal     => T::from_str_radix(&s     , 10),
-      Radix::Hexadecimal => T::from_str_radix(&s[2..], 16),
+      Radix::Binary      => T::from_str_radix(&s, 2 ),
+      Radix::Octal       => T::from_str_radix(&s, 8 ),
+      Radix::Decimal     => T::from_str_radix(&s, 10),
+      Radix::Hexadecimal => T::from_str_radix(&s, 16),
     }
   }
 }
