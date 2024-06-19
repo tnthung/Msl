@@ -91,6 +91,7 @@ impl Lexer {
       self.skip_whitespace();
       if self.is_eof() { break; }
 
+      if let Some(t) = self.lex_lit_int   ()  { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_bool  ()  { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_char  ()? { tokens.push(t); continue; }
       if let Some(t) = self.lex_lit_str   ()? { tokens.push(t); continue; }
@@ -557,6 +558,53 @@ impl Lexer {
 
     let range = start..self.advance_n(3).unwrap();
     Err(UnterminatedCharLiteral(self.clone(), range))
+  }
+
+  fn lex_lit_int(&mut self) -> Option<Token> {
+    let (
+      mut range,
+      value,
+      radix,
+      exponent,
+    ) =
+      if let Some((r, m)) = self.lex_by_regex(r"^[+-]?0b[01_]*[01]", None) {
+        (r, m.get("<0>").unwrap().clone(), Radix::Binary, None)
+      }
+
+      else if let Some((r, m)) = self.lex_by_regex(r"^[+-]?0o[0-7_]*[0-7]", None) {
+        (r, m.get("<0>").unwrap().clone(), Radix::Octal, None)
+      }
+
+      else if let Some((r, m)) = self.lex_by_regex(r"^[+-]?0x[0-9a-fA-F_]*[0-9a-fA-F]", None) {
+        (r, m.get("<0>").unwrap().clone(), Radix::Hexadecimal, None)
+      }
+
+      else if let Some((r, m)) = self.lex_by_regex(r"^[+-]?[0-9](?:[0-9_]*[0-9])?(?:[eE](?<exp>[0-9]+))?", None) {
+        let all = m.get("<0>").unwrap().clone();
+        let exp = m.get("exp").map(|v| v.parse().unwrap());
+        (r, all, Radix::Decimal, exp)
+      }
+
+      else { return None; };
+
+    let suffix  = self.lex_identifier();
+
+    range.end = suffix.as_ref().map_or(
+      range.end, |t| t.range().end.clone());
+
+    let suffix  = suffix.map(|t| t.try_into().unwrap());
+    let sign    = if value.starts_with('-') { Sign::Negative } else { Sign::Positive };
+    let spacing = self.get_spacing(&range);
+
+    return Some(Token::LitInt(LitInt {
+      range,
+      spacing,
+      value,
+      sign,
+      radix,
+      exponent,
+      suffix,
+    }));
   }
 
   fn lex_lit_bool(&mut self) -> Option<Token> {
