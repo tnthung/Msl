@@ -88,18 +88,8 @@ impl Lexer {
 
     let mut tokens = Vec::new();
 
-    loop {
-      self.skip_whitespace();
-      if self.is_eof() { break; }
-
-      if let Some(t) = self.lex_lit_float ()  { tokens.push(t); continue; }
-      if let Some(t) = self.lex_lit_int   ()  { tokens.push(t); continue; }
-      if let Some(t) = self.lex_lit_bool  ()  { tokens.push(t); continue; }
-      if let Some(t) = self.lex_lit_char  ()? { tokens.push(t); continue; }
-      if let Some(t) = self.lex_lit_str   ()? { tokens.push(t); continue; }
-      if let Some(t) = self.lex_identifier()  { tokens.push(t); continue; }
-
-      tokens.push(self.lex_punctuator());
+    while let Some(token) = self.lex_next_token()? {
+      tokens.push(token);
     }
 
     self.tokens = Some(tokens.into());
@@ -256,6 +246,24 @@ impl Lexer {
     let end   = self.advance_n(map.get("<0>").unwrap().chars().count())?;
 
     Some((start..end, map))
+  }
+
+  fn lex_next_token(&mut self) -> Result<Option<Token>> {
+    self.skip_whitespace();
+
+    if self.is_eof() {
+      return Ok(None);
+    }
+
+    if let Some(t) = self.lex_group     ()? { return Ok(Some(t)); }
+    if let Some(t) = self.lex_lit_float ()  { return Ok(Some(t)); }
+    if let Some(t) = self.lex_lit_int   ()  { return Ok(Some(t)); }
+    if let Some(t) = self.lex_lit_bool  ()  { return Ok(Some(t)); }
+    if let Some(t) = self.lex_lit_char  ()? { return Ok(Some(t)); }
+    if let Some(t) = self.lex_lit_str   ()? { return Ok(Some(t)); }
+    if let Some(t) = self.lex_identifier()  { return Ok(Some(t)); }
+
+    Ok(Some(self.lex_punctuator()))
   }
 
   fn lex_identifier(&mut self) -> Option<Token> {
