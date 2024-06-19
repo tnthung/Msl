@@ -58,8 +58,8 @@ pub struct Punct {
 pub struct LitStr {
   pub range  : Range,
   pub spacing: Spacing,
-  pub value  : String,
   pub prefix : Option<Ident>,
+  pub value  : String,
 }
 
 
@@ -67,8 +67,8 @@ pub struct LitStr {
 pub struct LitChar {
   pub range  : Range,
   pub spacing: Spacing,
-  pub value  : char,
   pub prefix : Option<Ident>,
+  pub value  : char,
 }
 
 
@@ -87,8 +87,8 @@ pub struct LitInt {
 pub struct LitFloat {
   pub range  : Range,
   pub spacing: Spacing,
-  pub value  : String,
   pub sign   : Sign,
+  pub value  : String,
   pub suffix : Option<Ident>,
 }
 
