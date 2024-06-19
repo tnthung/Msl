@@ -27,6 +27,7 @@ pub enum LexError {
   UnterminatedStringLiteral(Lexer, Range),
   InvalidEscapeSequence    (Lexer, Range),
   UnterminatedCharLiteral  (Lexer, Range),
+  UnterminatedGroup        (Lexer, Range),
 }
 
 
@@ -264,6 +265,59 @@ impl Lexer {
     if let Some(t) = self.lex_identifier()  { return Ok(Some(t)); }
 
     Ok(Some(self.lex_punctuator()))
+  }
+
+  fn lex_group(&mut self) -> Result<Option<Token>> {
+    let start = self.get_location();
+    let mut tokens = Vec::new();
+
+    let delimiter = match self.peek() {
+      Some('(') => Delimiter::Parentheses,
+      Some('[') => Delimiter::Brackets,
+      Some('{') => Delimiter::Braces,
+      _ => return Ok(None),
+    };
+
+    let (closing, invalid) = match delimiter {
+      Delimiter::Parentheses => (')', "]}"),
+      Delimiter::Brackets    => (']', ")}"),
+      Delimiter::Braces      => ('}', "])"),
+    };
+
+    self.advance();
+
+    loop {
+      self.skip_whitespace();
+
+      if self.is_eof() {
+        let range = start..self.get_location();
+        return Err(UnterminatedGroup(self.clone(), range));
+      }
+
+      let ch = self.peek().unwrap();
+
+      if ch == closing {
+        self.advance();
+        break;
+      }
+
+      if invalid.contains(ch) {
+        let range = start..self.get_location();
+        return Err(UnterminatedGroup(self.clone(), range));
+      }
+
+      tokens.push(self.lex_next_token()?.unwrap());
+    }
+
+    let range   = start..self.get_location();
+    let spacing = self.get_spacing(&range);
+
+    Ok(Some(Token::Group(Group {
+      range,
+      spacing,
+      delimiter,
+      tokens: tokens.into(),
+    })))
   }
 
   fn lex_identifier(&mut self) -> Option<Token> {
