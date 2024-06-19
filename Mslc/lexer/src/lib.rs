@@ -2,6 +2,7 @@ use types::token   ::*;
 use types::location::*;
 
 use std::sync::Arc;
+use std::collections::HashMap;
 
 
 #[derive(Debug, Clone)]
