@@ -207,6 +207,54 @@ impl Lexer {
     }
   }
 
+  /// `max_input_len` is used to prevent collecting too many unnecessary characters.
+  /// If not set, the default value is `500` as one token rarely exceeds that length.
+  fn lex_by_regex(&mut self, regex: &'static str, max_input_len: Option<usize>) -> Option<(Range, HashMap<String, String>)> {
+    use once_cell::sync::Lazy;
+    use std::collections::HashMap;
+
+    static mut REGEX: Lazy<HashMap<&'static str, regex::Regex>> =
+      Lazy::new(HashMap::new);
+
+    if !regex.starts_with('^') {
+      panic!("The regex must start with '^'");
+    }
+
+    let regex = unsafe {
+      REGEX.get(regex).unwrap_or_else(|| {
+        let rule = regex::Regex::new(regex).unwrap();
+        REGEX.insert(regex, rule);
+        REGEX.get(regex).unwrap()
+      })
+    };
+
+    let range  = self.offset..max_input_len.unwrap_or(500).min(self.source.len());
+    let slice  = self.source[range].iter().collect::<String>();
+    let result = regex.captures(&slice)?;
+
+    let mut map = HashMap::new();
+
+    let mut idx = 0;
+    for cap in regex.capture_names() {
+      if let Some(group) = result.get(idx) {
+        let group = group.as_str().to_string();
+
+        if let Some(name) = cap {
+          map.insert(name.into(), group.clone());
+        }
+
+        map.insert(format!("<{idx}>"), group);
+      }
+
+      idx += 1;
+    }
+
+    let start = self.get_location();
+    let end   = self.advance_n(map.get("<0>").unwrap().chars().count())?;
+
+    Some((start..end, map))
+  }
+
   fn lex_identifier(&mut self) -> Option<Token> {
     let start = self.get_location();
     let mut end        = start.clone();
