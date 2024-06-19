@@ -34,7 +34,7 @@ pub struct Group {
   pub range    : Range,
   pub spacing  : Spacing,
   pub delimiter: Delimiter,
-  pub tokens   : Vec<Token>,
+  pub tokens   : Arc<[Token]>,
 }
 
 
@@ -393,7 +393,7 @@ impl LitBool {
 
 impl From<Group> for Vec<Token> {
   fn from(group: Group) -> Self {
-    group.tokens
+    group.tokens.iter().cloned().collect()
   }
 }
 
@@ -415,7 +415,7 @@ pub struct TokenStream {
 impl From<Group> for TokenStream {
   fn from(group: Group) -> Self {
     TokenStream {
-      tokens: Arc::from(group.tokens.into_boxed_slice()),
+      tokens: group.tokens,
       index : 0,
     }
   }
