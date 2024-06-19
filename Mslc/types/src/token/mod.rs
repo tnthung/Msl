@@ -74,12 +74,13 @@ pub struct LitChar {
 
 #[derive(Debug, Clone)]
 pub struct LitInt {
-  pub range  : Range,
-  pub spacing: Spacing,
-  pub value  : String,
-  pub radix  : Radix,
-  pub sign   : Sign,
-  pub suffix : Option<Ident>,
+  pub range   : Range,
+  pub spacing : Spacing,
+  pub sign    : Sign,
+  pub radix   : Radix,
+  pub value   : String,
+  pub exponent: Option<usize>,  // only for decimal
+  pub suffix  : Option<Ident>,
 }
 
 
@@ -306,7 +307,32 @@ impl LitInt {
   pub fn is_positive(&self) -> bool { self.sign == Sign::Positive }
 
   pub fn to_int(&self) -> BigInt {
-    self.radix.parse(&self.value).unwrap()
+    let start = {
+      let mut start = 0;
+
+      let first = self.value.chars().nth(0);
+
+      if matches!(first, Some('+' | '-')) { start += 1; }
+      if !self.radix.is_decimal()         { start += 2; }
+
+      start
+    };
+
+    let end = self.value.len() - self.exponent
+      .map_or(0, |e| e.to_string().len() + 1);
+
+    let mut ret = self.radix.parse(&self.value[start..end]).unwrap();
+
+    ret *= match self.sign {
+      Sign::Negative => -1,
+      Sign::Positive =>  1,
+    };
+
+    if let Some(exp) = self.exponent {
+      ret *= BigInt::from(10).pow(exp as u32);
+    }
+
+    return ret;
   }
 }
 
