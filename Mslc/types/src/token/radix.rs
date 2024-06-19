@@ -42,4 +42,13 @@ impl Radix {
       Radix::Hexadecimal => T::from_str_radix(&s, 16),
     }
   }
+
+  pub fn get_digit_checker(&self) -> fn(char) -> bool {
+    match self {
+      Radix::Binary      => |c| c == '0' || c == '1',
+      Radix::Octal       => |c| c.is_ascii_digit() && c <= '7',
+      Radix::Decimal     => |c| c.is_ascii_digit(),
+      Radix::Hexadecimal => |c| c.is_ascii_hexdigit(),
+    }
+  }
 }
