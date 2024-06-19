@@ -86,11 +86,14 @@ pub struct LitInt {
 
 #[derive(Debug, Clone)]
 pub struct LitFloat {
-  pub range  : Range,
-  pub spacing: Spacing,
-  pub sign   : Sign,
-  pub value  : String,
-  pub suffix : Option<Ident>,
+  pub range      : Range,
+  pub spacing    : Spacing,
+  pub sign       : Sign,
+  pub value      : String,
+  pub numerator  : String,
+  pub denominator: String,
+  pub exponent   : Option<isize>,
+  pub suffix     : Option<Ident>,
 }
 
 
@@ -350,7 +353,25 @@ impl LitFloat {
   pub fn is_positive(&self) -> bool { self.sign == Sign::Positive }
 
   pub fn to_float(&self) -> BigRational {
-    self.value.parse().unwrap()
+    let mut den = "1".to_string() + &"0".repeat(self.denominator.len());
+    let mut num = self.numerator.clone() + &self.denominator;
+
+    let sign = match self.sign {
+      Sign::Negative => "-",
+      Sign::Positive => "+",
+    };
+
+    if let Some(exp) = self.exponent {
+      let exp = exp as isize;
+
+      if exp > 0 {
+        num += &"0".repeat(exp as usize);
+      } else {
+        den += &"0".repeat(-exp as usize);
+      }
+    }
+
+    return format!("{sign}{num}/{den}").parse().unwrap();
   }
 }
 
