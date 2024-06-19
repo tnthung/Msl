@@ -38,6 +38,10 @@ impl Location {
   pub fn offset(&self) -> usize {
     self.offset
   }
+
+  pub fn to_range(&self) -> Range {
+    self.clone()..self.clone()
+  }
 }
 
 
