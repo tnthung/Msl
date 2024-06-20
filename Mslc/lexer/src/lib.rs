@@ -320,27 +320,14 @@ impl Lexer {
   }
 
   fn lex_identifier(&mut self) -> Option<Token> {
-    let start = self.get_location();
-    let mut end        = start.clone();
-    let mut identifier = String::new();
+    if let Some((range, value)) = self.lex_by_regex(r"^[a-zA-Z_][a-zA-Z0-9_]*", None) {
+      let spacing    = self.get_spacing(&range);
+      let identifier = value.get("<0>").unwrap().to_owned();
 
-    while let Some(ch) = self.peek() {
-      if !ch.is_ascii_alphanumeric() && ch != '_' {
-        break;
-      }
-
-      identifier.push(ch);
-      end = self.advance()?;
+      return Some(Token::Ident(Ident { range, spacing, identifier }));
     }
 
-    if identifier.is_empty() {
-      return None;
-    }
-
-    let range   = start..end;
-    let spacing = self.get_spacing(&range);
-
-    Some(Token::Ident(Ident { range, spacing, identifier }))
+    None
   }
 
   fn lex_punctuator(&mut self) -> Token {
@@ -700,29 +687,11 @@ impl Lexer {
   }
 
   fn lex_lit_bool(&mut self) -> Option<Token> {
-    let start = self.get_location();
-
-    let [a, b, c, d, e] = self.peek_next_n();
-
-    if a == Some('t')
-    && b == Some('r')
-    && c == Some('u')
-    && d == Some('e') {
-      let range = start..self.advance_n(4).unwrap();
+    if let Some((range, value)) = self.lex_by_regex(r"^(true|false)", None) {
       let spacing = self.get_spacing(&range);
+      let value   = value.get("<0>").unwrap() == "true";
 
-      return Some(Token::LitBool(LitBool { range, spacing, value: true }));
-    }
-
-    if a == Some('f')
-    && b == Some('a')
-    && c == Some('l')
-    && d == Some('s')
-    && e == Some('e') {
-      let range = start..self.advance_n(5).unwrap();
-      let spacing = self.get_spacing(&range);
-
-      return Some(Token::LitBool(LitBool { range, spacing, value: false }));
+      return Some(Token::LitBool(LitBool { range, spacing, value }));
     }
 
     None
