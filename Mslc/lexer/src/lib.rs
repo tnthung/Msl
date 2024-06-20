@@ -205,7 +205,6 @@ impl Lexer {
   /// If not set, the default value is `500` as one token rarely exceeds that length.
   fn lex_by_regex(&mut self, regex: &'static str, max_input_len: Option<usize>) -> Option<(Range, HashMap<String, String>)> {
     use once_cell::sync::Lazy;
-    use std::collections::HashMap;
 
     static mut REGEX: Lazy<HashMap<&'static str, regex::Regex>> =
       Lazy::new(HashMap::new);
