@@ -29,4 +29,20 @@ impl Spacing {
   pub fn is_none(&self) -> bool {
     matches!(self, Spacing::None)
   }
+
+  pub fn has_leading(&self) -> bool {
+    matches!(self, Spacing::Both | Spacing::Leading)
+  }
+
+  pub fn has_trailing(&self) -> bool {
+    matches!(self, Spacing::Both | Spacing::Trailing)
+  }
+
+  pub fn has_no_leading(&self) -> bool {
+    matches!(self, Spacing::None | Spacing::Trailing)
+  }
+
+  pub fn has_no_trailing(&self) -> bool {
+    matches!(self, Spacing::None | Spacing::Leading)
+  }
 }
