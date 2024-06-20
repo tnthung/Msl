@@ -697,3 +697,40 @@ impl Lexer {
     None
   }
 }
+
+
+#[cfg(test)]
+#[test]
+fn test() {
+  use std::io::Write;
+
+  let mut lexer = Lexer::from_source(r#"
+    main() => {
+      use @Std::Prelude::*;
+
+      var x = 0;
+      var y = 1;
+      var z = 1;
+
+      for! i in 0..100 {
+        x = y + z;
+        y = z;
+        z = x;
+      }
+
+      println!("100th fib number: {x}");
+    };
+  "#);
+
+  let tokens = lexer.lex().unwrap();
+
+  write!(
+    std::fs::OpenOptions::new()
+      .write(true)
+      .create(true)
+      .truncate(true)
+      .open("../../tokens.txt")
+      .expect("fail to open file for writing"),
+    "{tokens:#?}"
+  ).unwrap();
+}
