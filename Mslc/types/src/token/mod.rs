@@ -14,6 +14,7 @@ use std::sync::Arc;
 use num::{ BigInt, BigRational };
 
 use crate::location::*;
+use crate::stream::Stream;
 
 
 #[derive(Debug, Clone)]
@@ -405,91 +406,8 @@ impl From<LitBool> for bool {
 }
 
 
-#[derive(Debug, Clone)]
-pub struct TokenStream {
-  tokens: Arc<[Token]>,
-  index : usize,
-}
-
-
-impl From<Group> for TokenStream {
+impl From<Group> for Stream<Token> {
   fn from(group: Group) -> Self {
-    TokenStream {
-      tokens: group.tokens,
-      index : 0,
-    }
-  }
-}
-
-
-impl From<Vec<Token>> for TokenStream {
-  fn from(tokens: Vec<Token>) -> Self {
-    TokenStream {
-      tokens: Arc::from(tokens.into_boxed_slice()),
-      index : 0,
-    }
-  }
-}
-
-
-impl Iterator for TokenStream {
-  type Item = Token;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    if self.index >= self.tokens.len() {
-      return None;
-    }
-
-    let token = self.tokens[self.index].clone();
-    self.index += 1;
-    Some(token)
-  }
-}
-
-
-impl TokenStream {
-  pub fn range(&self) -> Option<Range> {
-    let start = &self.tokens.first()?.range().start;
-    let end   = &self.tokens.last ()?.range().end  ;
-    Some(start.clone()..end.clone())
-  }
-
-  pub fn is_empty(&self) -> bool {
-    self.tokens.is_empty()
-  }
-
-  pub fn as_slice(&self) -> &[Token] {
-    &self.tokens
-  }
-
-  pub fn extend_from_slice(&mut self, rest: &[Token]) {
-    let mut tokens = Vec::new();
-
-    tokens.reserve(self.tokens.len() + rest.len());
-    tokens.extend_from_slice(&self.tokens[..self.index]);
-    tokens.extend_from_slice(rest);
-    tokens.extend_from_slice(&self.tokens[self.index..]);
-
-    self.tokens = Arc::from(tokens.into_boxed_slice());
-  }
-
-  pub fn extend(&mut self, rest: TokenStream) {
-    self.extend_from_slice(rest.as_slice());
-  }
-
-  pub fn peek_n(&self, n: usize) -> Option<&Token> {
-    self.tokens.get(self.index + n)
-  }
-
-  pub fn peek(&self) -> Option<&Token> {
-    self.peek_n(0)
-  }
-
-  pub fn advance_n(&mut self, n: usize) {
-    self.index += n;
-  }
-
-  pub fn advance(&mut self) {
-    self.advance_n(1);
+    group.tokens.into()
   }
 }
