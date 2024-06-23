@@ -1,17 +1,24 @@
+mod symbol;
+
+
 use types::token::*;
 use types::location::*;
+
+use self::symbol::Symbol;
 
 
 #[derive(Debug, Clone)]
 pub enum Ast {
-  Token(Token),
+  Token (Token ),
+  Symbol(Symbol),
 }
 
 
 impl Ast {
   pub fn range(&self) -> &Range {
     match self {
-      Ast::Token (t) => t.range(),
+      Ast::Token (t) =>  t.range(),
+      Ast::Symbol(s) => &s.range,
     }
   }
 }
@@ -56,4 +63,5 @@ macro_rules! impl_commons {
 }
 
 
-impl_commons!(Token);
+impl_commons!(Token );
+impl_commons!(Symbol);
