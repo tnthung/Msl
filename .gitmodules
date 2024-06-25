@@ -1,0 +1,12 @@
+[submodule "Idea"]
+	path = Idea
+	url = ./Idea
+[submodule "Doc"]
+	path = Doc
+	url = ./Doc
+[submodule "Mslc"]
+	path = Mslc
+	url = ./Mslc
+[submodule "Mslib"]
+	path = Mslib
+	url = ./Mslib
